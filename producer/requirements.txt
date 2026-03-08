@@ -1,0 +1,4 @@
+confluent-kafka==2.5.3
+pydantic==2.8.2
+pydantic-settings==2.4.0
+orjson==3.10.7
