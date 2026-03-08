@@ -1,0 +1,5 @@
+pyspark==3.5.2
+clickhouse-connect==0.7.19
+pydantic==2.8.2
+pydantic-settings==2.4.0
+orjson==3.10.7
