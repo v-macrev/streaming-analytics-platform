@@ -1,83 +1,180 @@
-# Streaming Analytics Platform
+# Real-Time Streaming Analytics Platform
 
-A production-grade real-time analytics platform for ingesting, processing, aggregating, and visualising live event streams using Kafka, Spark Structured Streaming, ClickHouse, and Grafana.
+A production-style event-driven analytics platform that ingests live events, processes them in real time, and exposes operational metrics through dashboards.
 
-## Overview
+This project simulates the architecture used in modern data platforms for processing high-volume event streams such as:
 
-This project simulates a modern event-driven analytics system used by digital platforms to process operational data in near real time.
+- clickstreams
+- ecommerce orders
+- payment events
+- inventory updates
+- IoT-style telemetry
 
-The platform ingests business events such as page views, cart interactions, orders, payments, and inventory updates, processes them through a streaming pipeline, computes analytical metrics continuously, stores the results in ClickHouse, and exposes them through Grafana dashboards.
+The system demonstrates how a streaming data pipeline can transform raw events into near real-time business metrics.
 
-The goal is to provide a portfolio-grade implementation of a real-world streaming architecture with strong engineering discipline, reproducible local deployment, and clear architectural boundaries.
+---
 
-## Business Problem
+# System Architecture
 
-Modern digital systems cannot rely exclusively on batch analytics for operational visibility.
+The platform implements a classic streaming analytics architecture:
 
-Teams need near-real-time answers to questions such as:
+Producer → Kafka → Spark Structured Streaming → ClickHouse → Grafana
 
-- How much revenue are we generating per minute?
-- Are payments succeeding or failing right now?
-- Is user activity increasing or dropping?
-- Are orders converting from cart activity?
-- Are inventory levels approaching operational risk?
+Event Flow:
 
-This platform addresses that need by transforming raw event streams into continuously updated analytical metrics.
+1. **Event Producer**
 
-## Primary Use Cases
+   A synthetic event generator simulates business activity such as:
 
-The system is designed to support use cases such as:
+   - page views
+   - cart additions
+   - order creation
+   - payment processing
+   - inventory changes
 
-- product activity monitoring
-- commerce operations tracking
-- payment health monitoring
-- inventory signal analysis
-- streaming architecture demonstration for portfolio and resume purposes
+   These events are serialized as JSON and published to Kafka.
 
-## Core Capabilities
+2. **Kafka Broker**
 
-- Event generation for multiple business domains
-- Kafka-based event ingestion
-- Spark Structured Streaming transformations and aggregations
-- Windowed real-time metric computation
-- ClickHouse analytical storage
-- Grafana dashboard visualisation
-- Local reproducible deployment with Docker Compose
-- Planned Kubernetes deployment extension
+   Kafka acts as the event backbone for the system.
 
-## High-Level Architecture
+   Topic used:
 
-```text
-+------------------+        +------------------+        +-----------------------------+
-| Event Producer   | -----> | Kafka            | -----> | Spark Structured Streaming  |
-| (Python)         |        | Topic: events.raw|        | Aggregation Job             |
-+------------------+        +------------------+        +-----------------------------+
-                                                               |
-                                                               v
-                                                     +------------------+
-                                                     | ClickHouse       |
-                                                     | Metrics Tables   |
-                                                     +------------------+
-                                                               |
-                                                               v
-                                                     +------------------+
-                                                     | Grafana          |
-                                                     | Dashboards       |
-                                                     +------------------+
+```
+
+events.raw
+
+```
+
+The topic contains multiple event types sharing a common event envelope.
+
+3. **Stream Processing**
+
+Spark Structured Streaming consumes events from Kafka and computes real-time metrics using event-time windows.
+
+Examples of computed metrics:
+
+- revenue per minute
+- orders per minute
+- payment success rate
+- active users per minute
+- event throughput
+- low stock alerts
+
+4. **Analytical Storage**
+
+Processed metrics are written into ClickHouse for fast analytical queries.
+
+5. **Visualization**
+
+Grafana reads metrics from ClickHouse and renders real-time dashboards.
+
+---
+
+# Architecture Diagram
+
+```
+
++----------------+
+| Event Producer |
++--------+-------+
+|
+v
++----------------+
+|     Kafka      |
+|   events.raw   |
++--------+-------+
+|
+v
++--------------------------+
+| Spark Structured Stream  |
+| Real-time Aggregations   |
++------------+-------------+
+|
+v
++-------------------------+
+|       ClickHouse        |
+|  analytics.metrics_1m   |
++------------+------------+
+|
+v
++-------------------------+
+|        Grafana          |
+|   Real-time Dashboard   |
++-------------------------+
+
+```
+
+---
+
+# Repository Structure
+
+```
+
+streaming-analytics-platform
+│
+├── producer
+│   └── src
+│       ├── main.py
+│       ├── generator.py
+│       ├── config.py
+│       └── models.py
+│
+├── streaming
+│   └── src
+│       ├── main.py
+│       ├── config.py
+│       ├── metrics.py
+│       └── clickhouse_sink.py
+│
+├── infra
+│   ├── docker-compose.yml
+│   ├── clickhouse
+│   │   └── init
+│   │       └── 001_init_metrics.sql
+│   └── grafana
+│       ├── dashboards
+│       └── provisioning
+│
+├── shared
+│   └── event_contract
+│       └── event_schema.json
+│
+├── docs
+│   └── event-model.md
+│
+├── tests
+│   └── producer
+│
+├── scripts
+│   └── run_producer.sh
+│
+└── README.md
+
 ````
 
-## Event Flow
+---
 
-1. The producer service emits synthetic business events.
-2. Events are published to Kafka topic `events.raw`.
-3. Spark Structured Streaming consumes and parses the event stream.
-4. The streaming job computes near-real-time aggregations using event-time windows.
-5. Aggregated metrics are written to ClickHouse.
-6. Grafana queries ClickHouse and renders operational dashboards.
+# Event Model
 
-## Event Domains
+All events follow a **canonical envelope**.
 
-The platform will simulate events from multiple domains:
+Example:
+
+```json
+{
+  "event_id": "uuid",
+  "event_type": "order_created",
+  "event_time": "2026-03-07T18:14:02Z",
+  "producer_time": "2026-03-07T18:14:03Z",
+  "user_id": "1234",
+  "session_id": "sess_abc",
+  "source": "web-simulator",
+  "payload": { ... }
+}
+````
+
+Supported event types:
 
 * `page_view`
 * `add_to_cart`
@@ -85,263 +182,140 @@ The platform will simulate events from multiple domains:
 * `payment_processed`
 * `inventory_updated`
 
-All events will share a canonical envelope and carry domain-specific payloads.
+Full specification available in:
 
-## Initial Real-Time Metrics
-
-The first version of the platform is expected to expose metrics such as:
-
-* revenue per minute
-* orders per minute
-* payment success rate
-* event throughput by type
-* active users per minute
-* low-stock inventory signal count
-
-These metrics are intentionally chosen to demonstrate practical streaming analytics rather than generic message movement.
-
-## Technology Stack
-
-### Broker
-
-**Apache Kafka**
-
-Kafka is used as the event broker because it is the industry-standard platform for event streaming and provides strong resume and architectural relevance.
-
-### Stream Processing
-
-**Spark Structured Streaming**
-
-Spark Structured Streaming was chosen because it is highly relevant in data engineering environments, integrates well with Python, and provides a practical path for implementing real-time aggregations locally.
-
-### Producer Runtime
-
-**Python**
-
-Python is used for the event producer because it supports fast iteration, clear modelling, and aligns well with the rest of the platform.
-
-### Analytical Store
-
-**ClickHouse**
-
-ClickHouse is used for low-latency analytical querying over continuously updated metrics.
-
-### Dashboarding
-
-**Grafana**
-
-Grafana is used to visualise operational analytics in real time.
-
-### Orchestration
-
-**Docker Compose**
-
-Docker Compose is the primary deployment mechanism for the first delivery phase because it provides local reproducibility with minimal operational overhead.
-
-### Planned Extension
-
-**Kubernetes**
-
-Kubernetes is planned as a future deployment extension after the full end-to-end platform is working in Docker Compose.
-
-## Why Docker Compose First
-
-This project is intentionally structured to deliver a working real-time analytics product before introducing orchestration complexity.
-
-Starting with Docker Compose provides:
-
-* faster end-to-end validation
-* lower setup friction for reviewers
-* easier local reproducibility
-* clearer debugging of service interactions
-
-Kubernetes will be added later as an infrastructure extension rather than as the initial operational dependency.
-
-That sequencing is deliberate: first prove the streaming system works, then prove it can be orchestrated in a more production-shaped environment.
-
-## Repository Structure
-
-```text
-streaming-analytics-platform/
-├── README.md
-├── .env.example
-├── docker-compose.yml
-├── docs/
-│   ├── architecture.md
-│   └── event-model.md
-├── producer/
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   └── src/
-│       ├── config.py
-│       ├── main.py
-│       ├── generator.py
-│       ├── models.py
-│       └── kafka_producer.py
-├── streaming/
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   └── src/
-│       ├── config.py
-│       ├── main.py
-│       ├── schemas.py
-│       ├── transformations.py
-│       └── clickhouse_sink.py
-├── infra/
-│   ├── kafka/
-│   ├── clickhouse/
-│   │   └── init/
-│   │       └── 001_init_metrics.sql
-│   └── grafana/
-│       ├── provisioning/
-│       │   ├── datasources/
-│       │   │   └── clickhouse.yml
-│       │   └── dashboards/
-│       │       └── dashboards.yml
-│       └── dashboards/
-│           └── realtime-overview.json
-├── shared/
-│   └── event_contract/
-│       └── event_schema.json
-├── scripts/
-│   ├── run_producer.sh
-│   └── run_streaming.sh
-└── k8s/
-    └── README.md
+```
+docs/event-model.md
 ```
 
-## Planned Components
+---
 
-### 1. Producer Service
+# Running the Platform
 
-A Python service that continuously generates realistic synthetic events and publishes them to Kafka.
+## 1. Start Infrastructure
 
-### 2. Kafka
+```
+docker compose up -d
+```
 
-The central event broker responsible for durable event ingestion and decoupling producers from consumers.
+This launches:
 
-### 3. Streaming Job
+* Kafka
+* Spark
+* ClickHouse
+* Grafana
 
-A Spark Structured Streaming application that reads from Kafka, validates and transforms events, computes windowed metrics, and writes results to ClickHouse.
+## 2. Run Event Producer
 
-### 4. ClickHouse
+```
+./scripts/run_producer.sh
+```
 
-The analytical store used to persist streaming aggregates for fast dashboard queries.
+This begins publishing events to Kafka.
 
-### 5. Grafana
+## 3. Start Streaming Processor
 
-The dashboard layer used to visualise operational metrics.
+The streaming service runs inside Docker and consumes events automatically.
 
-### 6. Kubernetes Extension
+---
 
-A later deployment track that will package the system for Kubernetes-based execution.
+# Accessing the Dashboard
 
-## Data Contract Strategy
+Grafana:
 
-The platform will use a shared event contract with a canonical event envelope.
+```
+http://localhost:3000
+```
 
-Expected top-level fields include:
+Default login:
 
-* `event_id`
-* `event_type`
-* `event_time`
-* `producer_time`
-* `user_id`
-* `session_id`
-* `source`
-* `payload`
+```
+admin
+admin
+```
 
-This gives the pipeline a consistent ingestion shape while allowing domain-specific event payloads.
+The dashboard **Streaming Analytics - Realtime Overview** displays live metrics.
 
-## Topic Strategy
+---
 
-The initial topic design is intentionally simple:
+# Example Metrics
 
-* `events.raw`
+The system computes real-time metrics such as:
 
-A single raw topic reduces complexity during the first implementation phase and keeps stream processing logic focused.
+| Metric                       | Description                                |
+| ---------------------------- | ------------------------------------------ |
+| revenue_per_minute           | total revenue generated per minute         |
+| orders_per_minute            | order creation rate                        |
+| payment_success_rate         | ratio of approved payments                 |
+| active_users_per_minute      | unique users interacting with the platform |
+| events_per_minute            | throughput per event type                  |
+| low_stock_signals_per_minute | inventory alerts                           |
 
-If needed, the project can later evolve toward topic-per-domain patterns.
+---
 
-## Metric Storage Strategy
+# Why This Project Exists
 
-The initial storage approach will prioritise aggregated metrics over raw event persistence.
+Modern companies rely heavily on event-driven systems.
 
-The first sink design will focus on a real-time metrics table in ClickHouse to support dashboard queries efficiently.
+Real-time data platforms power:
 
-This keeps the project aligned with its analytics objective and avoids unnecessary operational sprawl in the early phase.
+* ecommerce analytics
+* fraud detection
+* observability pipelines
+* recommendation systems
+* IoT monitoring
 
-## Deployment Modes
+This project demonstrates core streaming engineering concepts including:
 
-### Mode 1 — Local Development and Demo
+* event modeling
+* distributed messaging
+* stream processing
+* windowed aggregations
+* analytical sinks
+* operational dashboards
 
-**Docker Compose**
+---
 
-This is the primary way to run the platform locally.
+# Technologies Used
 
-### Mode 2 — Orchestration Extension
+| Component           | Technology                 |
+| ------------------- | -------------------------- |
+| Event Broker        | Kafka                      |
+| Stream Processing   | Spark Structured Streaming |
+| Analytical Database | ClickHouse                 |
+| Visualization       | Grafana                    |
+| Containerization    | Docker                     |
+| Language            | Python                     |
 
-**Kubernetes**
+---
 
-This will be introduced after the Compose-based platform is complete and validated end to end.
+# Engineering Principles
 
-## Implementation Principles
+This repository was built using several principles common in production data platforms:
 
-The project is being built under the following engineering rules:
+* **event-driven architecture**
+* **stream-first analytics**
+* **schema-based contracts**
+* **containerized reproducibility**
+* **separation of producer and processor services**
+* **observable metrics pipelines**
 
-* architecture first
-* one file per step
-* complete files only
-* consistent naming and contracts
-* production-minded structure
-* reproducible local delivery
-* commit discipline at logical boundaries
+---
 
-## Planned Implementation Sequence
+# Future Improvements
 
-1. `README.md`
-2. `docker-compose.yml`
-3. `.env.example`
-4. `docs/architecture.md`
-5. `shared/event_contract/event_schema.json`
-6. `producer/requirements.txt`
-7. `producer/src/config.py`
-8. `producer/src/models.py`
-9. `producer/src/generator.py`
-10. `producer/src/kafka_producer.py`
-11. `producer/src/main.py`
-12. `producer/Dockerfile`
-13. `streaming/requirements.txt`
-14. `streaming/src/config.py`
-15. `streaming/src/schemas.py`
-16. `streaming/src/transformations.py`
-17. `streaming/src/clickhouse_sink.py`
-18. `streaming/src/main.py`
-19. `streaming/Dockerfile`
-20. `infra/clickhouse/init/001_init_metrics.sql`
-21. `infra/grafana/provisioning/datasources/clickhouse.yml`
-22. `infra/grafana/provisioning/dashboards/dashboards.yml`
-23. `infra/grafana/dashboards/realtime-overview.json`
-24. `docs/event-model.md`
-25. `scripts/run_producer.sh`
-26. `scripts/run_streaming.sh`
-27. `k8s/README.md`
+Potential extensions include:
 
-## Expected Outcome
+* schema registry integration
+* exactly-once processing semantics
+* multiple Kafka partitions
+* additional event types
+* anomaly detection metrics
+* Kubernetes deployment
+* alerting via Grafana
 
-When complete, this repository should demonstrate:
+---
 
-* event-driven architecture understanding
-* Kafka-based ingestion design
-* practical streaming analytics implementation
-* real-time aggregation patterns
-* ClickHouse analytical modelling
-* operational dashboard integration
-* local reproducibility
-* extensibility toward Kubernetes deployment
+# License
 
-## Status
-
-This repository is currently under incremental implementation.
-
-The architecture and delivery plan are defined first, and the project is built one production-ready file at a time.
+GNU Affero General Public License v3
