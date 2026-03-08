@@ -191,7 +191,7 @@ def build_metrics(events_df: DataFrame, settings: StreamingSettings) -> DataFram
 
     metrics_active_users = (
         events_df.groupBy(window_expr.alias("window"))
-        .agg(F.countDistinct("user_id").cast("double").alias("metric_value"))
+        .agg(F.approx_count_distinct("user_id").cast("double").alias("metric_value"))
         .select(
             F.col("window.start").alias("window_start"),
             F.col("window.end").alias("window_end"),
