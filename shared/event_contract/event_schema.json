@@ -1,0 +1,401 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/streaming-analytics-platform/event-schema.json",
+  "title": "Streaming Analytics Platform Event Schema",
+  "description": "Canonical event contract for all events published to Kafka topic events.raw.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "event_type",
+    "event_time",
+    "producer_time",
+    "user_id",
+    "session_id",
+    "source",
+    "payload"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "Globally unique identifier for the event.",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "event_type": {
+      "type": "string",
+      "description": "Logical event type used to identify payload semantics.",
+      "enum": [
+        "page_view",
+        "add_to_cart",
+        "order_created",
+        "payment_processed",
+        "inventory_updated"
+      ]
+    },
+    "event_time": {
+      "type": "string",
+      "description": "Business event timestamp in ISO 8601 UTC format.",
+      "format": "date-time"
+    },
+    "producer_time": {
+      "type": "string",
+      "description": "Timestamp at which the producer emitted the event in ISO 8601 UTC format.",
+      "format": "date-time"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "Logical user identifier associated with the event.",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Logical session identifier associated with the event.",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "source": {
+      "type": "string",
+      "description": "Producer source name or channel that emitted the event.",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "payload": {
+      "description": "Event-type-specific payload.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/pageViewEvent"
+        },
+        {
+          "$ref": "#/$defs/addToCartEvent"
+        },
+        {
+          "$ref": "#/$defs/orderCreatedEvent"
+        },
+        {
+          "$ref": "#/$defs/paymentProcessedEvent"
+        },
+        {
+          "$ref": "#/$defs/inventoryUpdatedEvent"
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "page_view"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/pageViewEvent"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "add_to_cart"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/addToCartEvent"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "order_created"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/orderCreatedEvent"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "payment_processed"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/paymentProcessedEvent"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "inventory_updated"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/inventoryUpdatedEvent"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "pageViewEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "page",
+        "product_id",
+        "category"
+      ],
+      "properties": {
+        "page": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Logical page or screen visited by the user."
+        },
+        "product_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Product identifier related to the page view."
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Product category associated with the viewed item."
+        },
+        "referrer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Traffic referrer source.",
+          "default": "direct"
+        }
+      }
+    },
+    "addToCartEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "product_id",
+        "quantity",
+        "unit_price"
+      ],
+      "properties": {
+        "product_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Identifier of the product added to cart."
+        },
+        "quantity": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Number of units added to cart."
+        },
+        "unit_price": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Unit price of the product at cart time."
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3,
+          "description": "ISO-like currency code used by the platform.",
+          "default": "BRL"
+        }
+      }
+    },
+    "orderCreatedEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "order_id",
+        "items_count",
+        "total_amount",
+        "currency"
+      ],
+      "properties": {
+        "order_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Logical order identifier."
+        },
+        "items_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "description": "Number of items in the order."
+        },
+        "total_amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total order amount."
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3,
+          "description": "ISO-like currency code for the order amount."
+        },
+        "channel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "description": "Commercial channel associated with the order.",
+          "default": "web"
+        }
+      }
+    },
+    "paymentProcessedEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "payment_id",
+        "order_id",
+        "payment_method",
+        "payment_status",
+        "amount"
+      ],
+      "properties": {
+        "payment_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Logical payment identifier."
+        },
+        "order_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Order identifier linked to the payment."
+        },
+        "payment_method": {
+          "type": "string",
+          "enum": [
+            "credit_card",
+            "pix",
+            "debit_card",
+            "wallet",
+            "boleto"
+          ],
+          "description": "Payment method used for the transaction."
+        },
+        "payment_status": {
+          "type": "string",
+          "enum": [
+            "approved",
+            "declined",
+            "pending"
+          ],
+          "description": "Outcome status of the payment."
+        },
+        "amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Payment amount processed."
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3,
+          "description": "ISO-like currency code for the payment.",
+          "default": "BRL"
+        }
+      }
+    },
+    "inventoryUpdatedEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "product_id",
+        "warehouse_id",
+        "delta_qty",
+        "stock_after"
+      ],
+      "properties": {
+        "product_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Product identifier whose stock changed."
+        },
+        "warehouse_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Warehouse or fulfilment location identifier."
+        },
+        "delta_qty": {
+          "type": "integer",
+          "minimum": -100000,
+          "maximum": 100000,
+          "description": "Change applied to the stock quantity. Negative values indicate stock reduction."
+        },
+        "stock_after": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000,
+          "description": "Inventory level after the update."
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "sale",
+            "restock",
+            "adjustment",
+            "return"
+          ],
+          "description": "Business reason for the inventory change.",
+          "default": "adjustment"
+        }
+      }
+    }
+  }
+}
